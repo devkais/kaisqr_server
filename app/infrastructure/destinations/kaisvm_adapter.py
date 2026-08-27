@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
-from contextlib import ExitStack
 from dataclasses import dataclass
 from typing import Any
 
@@ -51,9 +51,10 @@ class KaisvmAdapter:
                 service_token = service_token[7:].strip()
             headers["Authorization"] = f"Bearer {service_token}"
 
+        respuestas: list[dict[str, Any]] = []
         try:
-            with ExitStack() as stack:
-                files = []
+            timeout = httpx.Timeout(connect=15, read=120, write=120, pool=15)
+            async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
                 for archivo in archivos:
                     ruta = archivo.ruta.resolve()
                     if not ruta.is_file():
@@ -61,21 +62,65 @@ class KaisvmAdapter:
                             f"No se encontró el archivo temporal {archivo.documento_id}"
                         )
 
-                    manejador = stack.enter_context(ruta.open("rb"))
-                    files.append(
-                        (
-                            "archivos",
-                            (archivo.nombre_original, manejador, archivo.tipo_mime),
-                        )
-                    )
+                    response: httpx.Response | None = None
+                    for intento in range(2):
+                        try:
+                            with ruta.open("rb") as manejador:
+                                files = {
+                                    "archivos": (
+                                        archivo.nombre_original,
+                                        manejador,
+                                        archivo.tipo_mime,
+                                    )
+                                }
+                                data = {
+                                    "nombres_personalizados": json.dumps(
+                                        [archivo.nombre_original]
+                                    )
+                                }
+                                response = await client.post(
+                                    url,
+                                    headers=headers,
+                                    data=data,
+                                    files=files,
+                                )
+                            break
+                        except (httpx.ReadError, httpx.ConnectError):
+                            if intento == 1:
+                                raise
+                            logger.warning(
+                                "Reintentando entrega de %s a kaisvm",
+                                archivo.nombre_original,
+                            )
+                            await asyncio.sleep(0.5)
 
-                data = {
-                    "nombres_personalizados": json.dumps(
-                        [archivo.nombre_original for archivo in archivos]
+                    if response is None:
+                        raise EntregaDestinoError(
+                            f"No se obtuvo respuesta para {archivo.nombre_original}"
+                        )
+
+                    if response.is_error:
+                        raise EntregaDestinoError(
+                            f"kaisvm rechazó {archivo.nombre_original} "
+                            f"({response.status_code}): {response.text[:300]}"
+                        )
+
+                    try:
+                        respuesta = response.json()
+                    except ValueError:
+                        respuesta = {"respuesta": response.text[:300]}
+
+                    datos_archivo = (
+                        respuesta
+                        if isinstance(respuesta, dict)
+                        else {"respuesta": respuesta}
                     )
-                }
-                async with httpx.AsyncClient(timeout=120, trust_env=False) as client:
-                    response = await client.post(url, headers=headers, data=data, files=files)
+                    respuestas.append(
+                        {
+                            "archivo": archivo.nombre_original,
+                            "respuesta": datos_archivo,
+                        }
+                    )
         except EntregaDestinoError:
             raise
         except (OSError, httpx.HTTPError) as error:
@@ -89,19 +134,11 @@ class KaisvmAdapter:
                 f"Error preparando la entrega a kaisvm: {error}"
             ) from error
 
-        if response.is_error:
-            raise EntregaDestinoError(
-                f"kaisvm rechazó la entrega ({response.status_code}): {response.text[:300]}"
-            )
-
-        try:
-            respuesta = response.json()
-        except ValueError:
-            respuesta = {"respuesta": response.text[:300]}
-
-        datos = respuesta if isinstance(respuesta, dict) else {"respuesta": respuesta}
-
         return EntregaResultado(
-            mensaje=datos.get("msg", "Documentos reenviados correctamente"),
-            datos={"reenviado": True, "respuesta": datos},
+            mensaje="Documentos reenviados correctamente",
+            datos={
+                "reenviado": True,
+                "cantidad": len(respuestas),
+                "respuestas": respuestas,
+            },
         )
