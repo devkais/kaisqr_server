@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import shutil
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from fastapi import UploadFile
@@ -18,6 +18,10 @@ class ArchivoTemporal:
     tipo_mime: str
     peso_bytes: int
     ruta: Path
+    tipo_archivo: str = "imagen"
+    poligono: list[dict[str, float]] = field(default_factory=list)
+    lote_pdf_id: str | None = None
+    nombre_pdf: str | None = None
 
 
 class TemporaryFileStorage:
@@ -62,6 +66,10 @@ class TemporaryFileStorage:
             tipo_mime=documento.tipo_mime,
             peso_bytes=documento.peso_bytes,
             ruta=Path(documento.ruta_temporal),
+            tipo_archivo=documento.tipo_archivo,
+            poligono=documento.poligono,
+            lote_pdf_id=documento.lote_pdf_id,
+            nombre_pdf=documento.nombre_pdf,
         )
 
     @staticmethod
@@ -70,4 +78,3 @@ class TemporaryFileStorage:
 
     def eliminar_sala(self, sala_id: str) -> None:
         shutil.rmtree(self.root_path / sala_id, ignore_errors=True)
-

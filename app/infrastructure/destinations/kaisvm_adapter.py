@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -50,21 +51,59 @@ class KaisvmAdapter:
             if service_token.lower().startswith("bearer "):
                 service_token = service_token[7:].strip()
             headers["Authorization"] = f"Bearer {service_token}"
+        headers["Connection"] = "close"
 
         respuestas: list[dict[str, Any]] = []
         try:
             timeout = httpx.Timeout(connect=15, read=120, write=120, pool=15)
-            async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
-                for archivo in archivos:
-                    ruta = archivo.ruta.resolve()
-                    if not ruta.is_file():
-                        raise EntregaDestinoError(
-                            f"No se encontró el archivo temporal {archivo.documento_id}"
-                        )
+            logger.info(
+                "[KAISVM] Entrega iniciada | sala=%s | recurso=%s | url=%s | "
+                "archivos=%d | timeout_connect=15s | timeout_read=120s",
+                sala.sala_id,
+                contexto.recurso_id,
+                url,
+                len(archivos),
+            )
+            for archivo in archivos:
+                ruta = archivo.ruta.resolve()
+                if not ruta.is_file():
+                    logger.error(
+                        "[KAISVM] Archivo temporal no encontrado | sala=%s | "
+                        "archivo=%s | ruta=%s",
+                        sala.sala_id,
+                        archivo.nombre_original,
+                        ruta,
+                    )
+                    raise EntregaDestinoError(
+                        f"No se encontró el archivo temporal {archivo.documento_id}"
+                    )
 
-                    response: httpx.Response | None = None
-                    for intento in range(2):
-                        try:
+                logger.info(
+                    "[KAISVM] Archivo preparado | sala=%s | nombre=%s | "
+                    "mime=%s | bytes=%d | ruta=%s",
+                    sala.sala_id,
+                    archivo.nombre_original,
+                    archivo.tipo_mime,
+                    archivo.peso_bytes,
+                    ruta,
+                )
+                response: httpx.Response | None = None
+                for intento in range(3):
+                    inicio_intento = time.perf_counter()
+                    logger.info(
+                        "[KAISVM] POST iniciado | sala=%s | archivo=%s | "
+                        "intento=%d/3",
+                        sala.sala_id,
+                        archivo.nombre_original,
+                        intento + 1,
+                    )
+                    try:
+                        # Un cliente nuevo por intento evita reutilizar un socket
+                        # que el backend propietario pudo haber cerrado.
+                        async with httpx.AsyncClient(
+                            timeout=timeout,
+                            trust_env=False,
+                        ) as client:
                             with ruta.open("rb") as manejador:
                                 files = {
                                     "archivos": (
@@ -84,52 +123,119 @@ class KaisvmAdapter:
                                     data=data,
                                     files=files,
                                 )
-                            break
-                        except (httpx.ReadError, httpx.ConnectError):
-                            if intento == 1:
-                                raise
-                            logger.warning(
-                                "Reintentando entrega de %s a kaisvm",
+                        logger.info(
+                            "[KAISVM] Respuesta recibida | sala=%s | archivo=%s | "
+                            "intento=%d/3 | status=%d | bytes_respuesta=%d | "
+                            "duracion_ms=%.0f",
+                            sala.sala_id,
+                            archivo.nombre_original,
+                            intento + 1,
+                            response.status_code,
+                            len(response.content),
+                            (time.perf_counter() - inicio_intento) * 1000,
+                        )
+                        break
+                    except (
+                        httpx.ReadError,
+                        httpx.ConnectError,
+                        httpx.RemoteProtocolError,
+                    ) as error:
+                        espera = 0.5 * (2**intento)
+                        detalle_error = str(error).strip() or (
+                            "el servidor cerró la conexión antes de responder"
+                        )
+                        logger.warning(
+                            "[KAISVM] Conexión fallida | sala=%s | archivo=%s | "
+                            "intento=%d/3 | tipo=%s | duracion_ms=%.0f | detalle=%s",
+                            sala.sala_id,
+                            archivo.nombre_original,
+                            intento + 1,
+                            type(error).__name__,
+                            (time.perf_counter() - inicio_intento) * 1000,
+                            detalle_error,
+                        )
+                        if intento == 2:
+                            logger.error(
+                                "[KAISVM] Se agotaron los reintentos | sala=%s | "
+                                "archivo=%s | intentos=3",
+                                sala.sala_id,
                                 archivo.nombre_original,
                             )
-                            await asyncio.sleep(0.5)
-
-                    if response is None:
-                        raise EntregaDestinoError(
-                            f"No se obtuvo respuesta para {archivo.nombre_original}"
+                            raise
+                        logger.info(
+                            "[KAISVM] Esperando antes de reintentar | sala=%s | "
+                            "archivo=%s | espera_s=%.1f",
+                            sala.sala_id,
+                            archivo.nombre_original,
+                            espera,
                         )
+                        await asyncio.sleep(espera)
 
-                    if response.is_error:
-                        raise EntregaDestinoError(
-                            f"kaisvm rechazó {archivo.nombre_original} "
-                            f"({response.status_code}): {response.text[:300]}"
-                        )
-
-                    try:
-                        respuesta = response.json()
-                    except ValueError:
-                        respuesta = {"respuesta": response.text[:300]}
-
-                    datos_archivo = (
-                        respuesta
-                        if isinstance(respuesta, dict)
-                        else {"respuesta": respuesta}
+                if response is None:
+                    raise EntregaDestinoError(
+                        f"No se obtuvo respuesta para {archivo.nombre_original}"
                     )
-                    respuestas.append(
-                        {
-                            "archivo": archivo.nombre_original,
-                            "respuesta": datos_archivo,
-                        }
+
+                if response.is_error:
+                    logger.error(
+                        "[KAISVM] Backend rechazó archivo | sala=%s | archivo=%s | "
+                        "status=%d | respuesta=%s",
+                        sala.sala_id,
+                        archivo.nombre_original,
+                        response.status_code,
+                        response.text[:500],
                     )
+                    raise EntregaDestinoError(
+                        f"kaisvm rechazó {archivo.nombre_original} "
+                        f"({response.status_code}): {response.text[:300]}"
+                    )
+
+                try:
+                    respuesta = response.json()
+                except ValueError:
+                    respuesta = {"respuesta": response.text[:300]}
+
+                datos_archivo = (
+                    respuesta
+                    if isinstance(respuesta, dict)
+                    else {"respuesta": respuesta}
+                )
+                respuestas.append(
+                    {
+                        "archivo": archivo.nombre_original,
+                        "respuesta": datos_archivo,
+                    }
+                )
+                logger.info(
+                    "[KAISVM] Archivo entregado correctamente | sala=%s | "
+                    "archivo=%s | total_entregados=%d",
+                    sala.sala_id,
+                    archivo.nombre_original,
+                    len(respuestas),
+                )
         except EntregaDestinoError:
             raise
         except (OSError, httpx.HTTPError) as error:
-            logger.exception("No fue posible entregar documentos a kaisvm")
+            detalle_error = str(error).strip() or "sin detalle"
+            logger.exception(
+                "[KAISVM] Entrega fallida por error de transporte | sala=%s | "
+                "tipo=%s | detalle=%s",
+                sala.sala_id,
+                type(error).__name__,
+                detalle_error,
+            )
             raise EntregaDestinoError(
-                f"No fue posible comunicarse con kaisvm: {error}"
+                "No fue posible comunicarse con kaisvm: "
+                f"{type(error).__name__} - {detalle_error}"
             ) from error
         except Exception as error:
-            logger.exception("Error inesperado durante la entrega a kaisvm")
+            logger.exception(
+                "[KAISVM] Error inesperado durante la entrega | sala=%s | "
+                "tipo=%s | detalle=%s",
+                sala.sala_id,
+                type(error).__name__,
+                error,
+            )
             raise EntregaDestinoError(
                 f"Error preparando la entrega a kaisvm: {error}"
             ) from error

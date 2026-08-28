@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -24,6 +26,9 @@ from app.domain.exceptions import (
     SalaNoDisponibleError,
     SalaNoEncontradaError,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class CreateSessionRequest(BaseModel):
@@ -66,14 +71,32 @@ def build_router(service: GestionSalas, api_key: str) -> APIRouter:
         try:
             return service.unirse_por_codigo(request.codigo)
         except Exception as error:
-            raise _to_http_exception(error) from error
+            http_error = _to_http_exception(error)
+            logger.warning(
+                "[HTTP] Unión rechazada | codigo=%s | status=%d | "
+                "tipo=%s | detalle=%s",
+                request.codigo,
+                http_error.status_code,
+                type(error).__name__,
+                error,
+            )
+            raise http_error from error
 
     @router.get("/salas/{sala_id}")
     def get_session(sala_id: str, token: str = Depends(require_session_token)) -> dict:
         try:
             return service.estado_sala(sala_id, token)
         except Exception as error:
-            raise _to_http_exception(error) from error
+            http_error = _to_http_exception(error)
+            logger.warning(
+                "[HTTP] Consulta de sala rechazada | sala=%s | status=%d | "
+                "tipo=%s | detalle=%s",
+                sala_id,
+                http_error.status_code,
+                type(error).__name__,
+                error,
+            )
+            raise http_error from error
 
     @router.post("/salas/{sala_id}/documentos")
     async def upload_document(
@@ -81,6 +104,10 @@ def build_router(service: GestionSalas, api_key: str) -> APIRouter:
         archivo: UploadFile = File(...),
         token: str = Depends(require_session_token),
         nombre_personalizado: str | None = Form(default=None),
+        tipo_archivo: str = Form(default="imagen"),
+        poligono: str | None = Form(default=None),
+        lote_pdf_id: str | None = Form(default=None),
+        nombre_pdf: str | None = Form(default=None),
     ) -> dict:
         try:
             return await service.registrar_documento(
@@ -88,9 +115,24 @@ def build_router(service: GestionSalas, api_key: str) -> APIRouter:
                 token=token,
                 archivo=archivo,
                 nombre_personalizado=nombre_personalizado,
+                tipo_archivo=tipo_archivo,
+                poligono=poligono,
+                lote_pdf_id=lote_pdf_id,
+                nombre_pdf=nombre_pdf,
             )
         except Exception as error:
-            raise _to_http_exception(error) from error
+            http_error = _to_http_exception(error)
+            logger.warning(
+                "[HTTP] Recepción de documento rechazada | sala=%s | "
+                "nombre=%s | tipo=%s | status=%d | error=%s | detalle=%s",
+                sala_id,
+                archivo.filename,
+                tipo_archivo,
+                http_error.status_code,
+                type(error).__name__,
+                error,
+            )
+            raise http_error from error
 
     @router.post("/salas/{sala_id}/finalizar")
     async def finalize_session(
@@ -100,7 +142,16 @@ def build_router(service: GestionSalas, api_key: str) -> APIRouter:
         try:
             return await service.finalizar_sala(sala_id, token)
         except Exception as error:
-            raise _to_http_exception(error) from error
+            http_error = _to_http_exception(error)
+            logger.warning(
+                "[HTTP] Finalización rechazada | sala=%s | status=%d | "
+                "error=%s | detalle=%s",
+                sala_id,
+                http_error.status_code,
+                type(error).__name__,
+                error,
+            )
+            raise http_error from error
 
     @router.websocket("/ws/v1/salas/{sala_id}")
     async def session_websocket(websocket: WebSocket, sala_id: str, token: str = "") -> None:

@@ -39,6 +39,10 @@ class DocumentoRecibido:
     tipo_mime: str
     peso_bytes: int
     ruta_temporal: str
+    tipo_archivo: str = "imagen"
+    poligono: list[dict[str, float]] = field(default_factory=list)
+    lote_pdf_id: str | None = None
+    nombre_pdf: str | None = None
     recibido_en: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
