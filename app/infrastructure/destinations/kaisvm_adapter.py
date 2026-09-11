@@ -30,7 +30,7 @@ class KaisvmAdapter:
 
     async def entregar(self, sala: Sala, archivos: list[ArchivoTemporal]) -> EntregaResultado:
         contexto = sala.contexto_destino
-        if contexto.sistema != "kaisvm" or contexto.modulo != "grupos":
+        if contexto.sistema != "kaisvm" or contexto.modulo not in {"grupos", "gastos"}:
             raise DestinoNoConfiguradoError(
                 f"No existe un adaptador para {contexto.sistema}/{contexto.modulo}"
             )
@@ -41,8 +41,9 @@ class KaisvmAdapter:
                 datos={"reenviado": False, "cantidad": len(archivos)},
             )
 
+        modulo_url = "grupos" if contexto.modulo == "grupos" else "gastos"
         url = (
-            f"{self.settings.kaisvm_base_url.rstrip('/')}/grupos/"
+            f"{self.settings.kaisvm_base_url.rstrip('/')}/{modulo_url}/"
             f"{contexto.recurso_id}/archivos"
         )
         headers: dict[str, str] = {}
@@ -115,7 +116,9 @@ class KaisvmAdapter:
                                 data = {
                                     "nombres_personalizados": json.dumps(
                                         [archivo.nombre_original]
-                                    )
+                                    ),
+                                    "sala_id": sala.sala_id,
+                                    "lote_pdf_id": archivo.lote_pdf_id or "",
                                 }
                                 response = await client.post(
                                     url,

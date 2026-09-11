@@ -13,7 +13,7 @@ from typing import Any
 from fastapi import UploadFile
 
 from app.core.config import Settings
-from app.domain.entities.sala import ContextoDestino, DocumentoRecibido, Sala
+from app.domain.entities.sala import ContextoDestino, DocumentoRecibido, EstadoSala, Sala
 from app.domain.exceptions import (
     AccesoSalaInvalidoError,
     DocumentoInvalidoError,
@@ -348,6 +348,33 @@ class GestionSalas:
             )
             await self.connection_manager.broadcast(sala_id, self._estado_evento(sala, str(error)))
             raise
+
+    async def cerrar_sala(self, sala_id: str, token: str) -> dict[str, Any]:
+        sala = self.obtener_sala(sala_id)
+        rol = sala.validar_token(token)
+        if rol not in {"observador", "movil"}:
+            raise AccesoSalaInvalidoError("El token no permite cerrar la sala")
+
+        if sala.estado in {
+            EstadoSala.ABIERTA,
+            EstadoSala.CONECTADA,
+            EstadoSala.RECIBIENDO,
+        }:
+            sala.cerrar()
+            self.repository.guardar(sala)
+            logger.info(
+                "[SALA] Sala cerrada | sala=%s | rol=%s | documentos=%d | pdfs=%d",
+                sala_id,
+                rol,
+                len(sala.documentos),
+                self._contar_lotes_pdf(sala),
+            )
+            await self.connection_manager.broadcast(
+                sala_id,
+                self._estado_evento(sala, "La sala fue cerrada desde el navegador"),
+            )
+
+        return self._sala_respuesta(sala)
 
     def estado_sala(self, sala_id: str, token: str) -> dict[str, Any]:
         sala = self.obtener_sala(sala_id)

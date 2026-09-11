@@ -19,6 +19,7 @@ class EstadoSala(StrEnum):
     RECIBIENDO = "recibiendo"
     FINALIZANDO = "finalizando"
     COMPLETADA = "completada"
+    CERRADA = "cerrada"
     EXPIRADA = "expirada"
     ERROR = "error"
 
@@ -68,6 +69,7 @@ class Sala:
         momento = ahora or datetime.now(timezone.utc)
         if momento >= self.expira_en and self.estado not in {
             EstadoSala.COMPLETADA,
+            EstadoSala.CERRADA,
             EstadoSala.EXPIRADA,
         }:
             self.estado = EstadoSala.EXPIRADA
@@ -114,6 +116,10 @@ class Sala:
 
     def completar(self) -> None:
         self.estado = EstadoSala.COMPLETADA
+
+    def cerrar(self) -> None:
+        self.estado = EstadoSala.CERRADA
+        self.movil_conectado = False
 
     def marcar_error(self, mensaje: str) -> None:
         self.estado = EstadoSala.ERROR

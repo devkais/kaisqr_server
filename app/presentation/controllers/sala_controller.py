@@ -153,6 +153,25 @@ def build_router(service: GestionSalas, api_key: str) -> APIRouter:
             )
             raise http_error from error
 
+    @router.post("/salas/{sala_id}/cerrar")
+    async def close_session(
+        sala_id: str,
+        token: str = Depends(require_session_token),
+    ) -> dict:
+        try:
+            return await service.cerrar_sala(sala_id, token)
+        except Exception as error:
+            http_error = _to_http_exception(error)
+            logger.warning(
+                "[HTTP] Cierre de sala rechazado | sala=%s | status=%d | "
+                "error=%s | detalle=%s",
+                sala_id,
+                http_error.status_code,
+                type(error).__name__,
+                error,
+            )
+            raise http_error from error
+
     @router.websocket("/ws/v1/salas/{sala_id}")
     async def session_websocket(websocket: WebSocket, sala_id: str, token: str = "") -> None:
         try:
