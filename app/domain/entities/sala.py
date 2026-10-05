@@ -28,8 +28,9 @@ class EstadoSala(StrEnum):
 class ContextoDestino:
     sistema: str
     modulo: str
-    recurso_id: int
+    recurso_id: int | None = None
     operacion: str = "subir_archivos"
+    recurso_referencia: str | None = None
 
 
 @dataclass

@@ -20,7 +20,7 @@ from app.domain.exceptions import (
     SalaNoDisponibleError,
     SalaNoEncontradaError,
 )
-from app.infrastructure.destinations.kaisvm_adapter import KaisvmAdapter
+from app.infrastructure.destinations.destination_dispatcher import DestinationDispatcher
 from app.infrastructure.documents.pdf_creator import PdfCreator
 from app.infrastructure.qr.qr_code_generator import QrCodeGenerator
 from app.infrastructure.repositories.memory_sala_repository import MemorySalaRepository
@@ -37,7 +37,7 @@ class GestionSalas:
         repository: MemorySalaRepository,
         qr_generator: QrCodeGenerator,
         temporary_storage: TemporaryFileStorage,
-        destination_adapter: KaisvmAdapter,
+        destination_adapter: DestinationDispatcher,
         pdf_creator: PdfCreator,
         connection_manager: ConnectionManager,
         settings: Settings,
@@ -220,7 +220,8 @@ class GestionSalas:
             "[SALA] Finalización solicitada | sala=%s | recurso=%s | "
             "tipo_inicial=%s | documentos=%d | pdfs=%d",
             sala_id,
-            sala.contexto_destino.recurso_id,
+            sala.contexto_destino.recurso_id
+            or sala.contexto_destino.recurso_referencia,
             sala.documentos[0].tipo_archivo if sala.documentos else "sin_documentos",
             len(sala.documentos),
             self._contar_lotes_pdf(sala),
@@ -310,7 +311,8 @@ class GestionSalas:
                 sala_id,
                 sala.contexto_destino.sistema,
                 sala.contexto_destino.modulo,
-                sala.contexto_destino.recurso_id,
+                sala.contexto_destino.recurso_id
+                or sala.contexto_destino.recurso_referencia,
                 ",".join(archivo.nombre_original for archivo in archivos_para_entrega),
             )
 
@@ -508,6 +510,7 @@ class GestionSalas:
                 "sistema": sala.contexto_destino.sistema,
                 "modulo": sala.contexto_destino.modulo,
                 "recurso_id": sala.contexto_destino.recurso_id,
+                "recurso_referencia": sala.contexto_destino.recurso_referencia,
                 "operacion": sala.contexto_destino.operacion,
             },
             "cantidad_documentos": len(sala.documentos),

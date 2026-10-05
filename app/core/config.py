@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     api_prefix: str = "/api/v1"
 
     api_key: str = "development-key"
-    cors_origins: str = "http://localhost:5171,http://127.0.0.1:5171,http://local.kaisweb.net"
+    cors_origins: str = "http://localhost:5171,http://127.0.0.1:5171,http://localhost:5173,http://127.0.0.1:5173,http://local.kaisweb.net"
 
     session_ttl_seconds: int = Field(default=600, ge=60, le=3600)
     max_documents_per_session: int = Field(default=20, ge=1, le=100)
@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     kaisvm_forward_enabled: bool = False
     kaisvm_base_url: str = "http://localhost:3500/api"
     kaisvm_service_token: str = ""
+
+    transporte_forward_enabled: bool = False
+    transporte_base_url: str = "http://localhost:3006/api"
+    transporte_service_key: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -4,13 +4,13 @@ import asyncio
 import json
 import logging
 import time
-from dataclasses import dataclass
 from typing import Any
 
 import httpx
 
 from app.core.config import Settings
 from app.domain.entities.sala import Sala
+from app.infrastructure.destinations.destination_result import EntregaResultado
 from app.domain.exceptions import DestinoNoConfiguradoError, EntregaDestinoError
 from app.infrastructure.storage.temporary_file_storage import ArchivoTemporal
 
@@ -18,19 +18,19 @@ from app.infrastructure.storage.temporary_file_storage import ArchivoTemporal
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class EntregaResultado:
-    mensaje: str
-    datos: dict[str, Any]
-
-
 class KaisvmAdapter:
+    sistema = "kaisvm"
+
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
 
     async def entregar(self, sala: Sala, archivos: list[ArchivoTemporal]) -> EntregaResultado:
         contexto = sala.contexto_destino
-        if contexto.sistema != "kaisvm" or contexto.modulo not in {"grupos", "gastos"}:
+        if (
+            contexto.sistema != "kaisvm"
+            or contexto.modulo not in {"grupos", "gastos"}
+            or contexto.recurso_id is None
+        ):
             raise DestinoNoConfiguradoError(
                 f"No existe un adaptador para {contexto.sistema}/{contexto.modulo}"
             )

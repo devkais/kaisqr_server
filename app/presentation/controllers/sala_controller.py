@@ -13,7 +13,8 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+from uuid import UUID
 
 from app.application.services.gestion_salas import GestionSalas
 from app.domain.entities.sala import ContextoDestino
@@ -34,8 +35,17 @@ logger = logging.getLogger(__name__)
 class CreateSessionRequest(BaseModel):
     sistema: str = Field(min_length=1, max_length=50)
     modulo: str = Field(min_length=1, max_length=50)
-    recurso_id: int = Field(gt=0)
+    recurso_id: int | None = Field(default=None, gt=0)
+    recurso_referencia: UUID | None = None
     operacion: str = Field(default="subir_archivos", min_length=1, max_length=80)
+
+    @model_validator(mode="after")
+    def validate_recurso(self) -> "CreateSessionRequest":
+        if (self.recurso_id is None) == (self.recurso_referencia is None):
+            raise ValueError(
+                "Debe enviarse exactamente uno de recurso_id o recurso_referencia"
+            )
+        return self
 
 
 class JoinSessionRequest(BaseModel):
@@ -62,6 +72,11 @@ def build_router(service: GestionSalas, api_key: str) -> APIRouter:
             sistema=request.sistema,
             modulo=request.modulo,
             recurso_id=request.recurso_id,
+            recurso_referencia=(
+                str(request.recurso_referencia)
+                if request.recurso_referencia is not None
+                else None
+            ),
             operacion=request.operacion,
         )
         return service.crear_sala(contexto)

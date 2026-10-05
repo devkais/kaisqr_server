@@ -5,7 +5,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.application.services.gestion_salas import GestionSalas
 from app.core.config import get_settings
+from app.infrastructure.destinations.destination_dispatcher import DestinationDispatcher
 from app.infrastructure.destinations.kaisvm_adapter import KaisvmAdapter
+from app.infrastructure.destinations.transporte_adapter import TransporteAdapter
 from app.infrastructure.documents.pdf_creator import PdfCreator
 from app.infrastructure.qr.qr_code_generator import QrCodeGenerator
 from app.infrastructure.repositories.memory_sala_repository import MemorySalaRepository
@@ -24,7 +26,9 @@ settings = get_settings()
 repository = MemorySalaRepository()
 connection_manager = ConnectionManager()
 temporary_storage = TemporaryFileStorage(settings.temporary_storage_path)
-destination_adapter = KaisvmAdapter(settings)
+destination_adapter = DestinationDispatcher(
+    [KaisvmAdapter(settings), TransporteAdapter(settings)]
+)
 pdf_creator = PdfCreator(settings.temporary_storage_path)
 session_service = GestionSalas(
     repository=repository,
@@ -48,11 +52,14 @@ app.include_router(build_router(session_service, settings.api_key), prefix=setti
 
 logger.info(
     "[INICIO] KaisQr_server | entorno=%s | api=%s | reenvio_kaisvm=%s | "
-    "destino=%s | almacenamiento_temporal=%s",
+    "reenvio_transporte=%s | destino_kaisvm=%s | destino_transporte=%s | "
+    "almacenamiento_temporal=%s",
     settings.environment,
     settings.api_prefix,
     settings.kaisvm_forward_enabled,
+    settings.transporte_forward_enabled,
     settings.kaisvm_base_url,
+    settings.transporte_base_url,
     settings.temporary_storage_path,
 )
 
