@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "baoyu-diagram": {
+      "source": "jimliu/baoyu-skills",
+      "sourceType": "github",
+      "skillPath": "skills/baoyu-diagram/SKILL.md",
+      "computedHash": "e7916305c6010b1bdcc1579754e6c7b4dd5462ac033c34327c640e5a18e52b75"
+    },
+    "fastapi": {
+      "source": "fastapi/fastapi",
+      "sourceType": "github",
+      "skillPath": "fastapi/.agents/skills/fastapi/SKILL.md",
+      "computedHash": "d9352016429f7974d7e1cdb7d66e840cdb37bff19a6a121a1711055cb90f47eb"
+    }
+  }
+}
