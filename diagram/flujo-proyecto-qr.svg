@@ -1,0 +1,204 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1560 1450" role="img" aria-labelledby="title desc">
+  <title id="title">Flujo del servidor QR: salas, documentos y adaptadores</title>
+  <desc id="desc">Diagrama de flujo desde la creación de una sala QR hasta la entrega de documentos al sistema destino. Incluye el adaptador KaisVM actual y el punto de extensión pendiente para Transporte.</desc>
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#1e293b" stroke-width="0.6"/>
+    </pattern>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0 0L10 4L0 8Z" fill="#64748b"/></marker>
+    <marker id="arrow-cyan" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0 0L10 4L0 8Z" fill="#22d3ee"/></marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0 0L10 4L0 8Z" fill="#34d399"/></marker>
+    <marker id="arrow-amber" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0 0L10 4L0 8Z" fill="#fbbf24"/></marker>
+    <marker id="arrow-rose" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0 0L10 4L0 8Z" fill="#fb7185"/></marker>
+    <style>
+      text { font-family: 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace; }
+      .title { fill:#f8fafc; font-size:25px; font-weight:700; }
+      .subtitle { fill:#94a3b8; font-size:12px; }
+      .lane-title { fill:#cbd5e1; font-size:13px; font-weight:700; letter-spacing:.5px; }
+      .box-title { fill:#f8fafc; font-size:12px; font-weight:700; text-anchor:middle; }
+      .box-sub { fill:#cbd5e1; font-size:10px; text-anchor:middle; }
+      .tiny { fill:#94a3b8; font-size:9px; }
+      .edge-label { fill:#cbd5e1; font-size:9px; }
+      .note-title { font-size:11px; font-weight:700; }
+      .note { fill:#cbd5e1; font-size:10px; }
+      .region { fill:rgba(15,23,42,.32); stroke:#334155; stroke-width:1; stroke-dasharray:7 5; }
+      .cyan { fill:rgba(8,51,68,.82); stroke:#22d3ee; }
+      .green { fill:rgba(6,78,59,.82); stroke:#34d399; }
+      .violet { fill:rgba(76,29,149,.72); stroke:#a78bfa; }
+      .amber { fill:rgba(120,53,15,.62); stroke:#fbbf24; }
+      .rose { fill:rgba(136,19,55,.68); stroke:#fb7185; }
+      .neutral { fill:rgba(30,41,59,.92); stroke:#64748b; }
+      .future { fill:rgba(120,53,15,.14); stroke:#fbbf24; stroke-dasharray:7 5; }
+      .node { stroke-width:1.5; rx:9; }
+      .line { fill:none; stroke:#64748b; stroke-width:1.7; marker-end:url(#arrow); }
+      .line-cyan { fill:none; stroke:#22d3ee; stroke-width:1.8; marker-end:url(#arrow-cyan); }
+      .line-green { fill:none; stroke:#34d399; stroke-width:1.8; marker-end:url(#arrow-green); }
+      .line-amber { fill:none; stroke:#fbbf24; stroke-width:1.8; marker-end:url(#arrow-amber); }
+      .line-rose { fill:none; stroke:#fb7185; stroke-width:1.7; stroke-dasharray:6 5; marker-end:url(#arrow-rose); }
+    </style>
+  </defs>
+
+  <rect width="1560" height="1450" fill="#0f172a"/>
+  <rect width="1560" height="1450" fill="url(#grid)"/>
+
+  <text x="48" y="52" class="title">Servidor QR · flujo de salas, documentos y destinos</text>
+  <text x="48" y="78" class="subtitle">Qué ocurre desde que el sistema solicitante genera el QR hasta que los archivos llegan al backend destino</text>
+  <rect x="1230" y="35" width="282" height="40" rx="20" fill="rgba(59,130,246,.18)" stroke="#60a5fa"/>
+  <text x="1371" y="60" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="700">PUNTO DE EXTENSIÓN: TRANSPORTE</text>
+
+  <!-- swim lanes -->
+  <rect x="40" y="110" width="320" height="1160" rx="14" class="region"/>
+  <text x="60" y="137" class="lane-title">1 · SISTEMA SOLICITANTE / WEB</text>
+  <rect x="380" y="110" width="420" height="1160" rx="14" class="region"/>
+  <text x="400" y="137" class="lane-title">2 · API + GESTIÓN DE SALAS</text>
+  <rect x="820" y="110" width="330" height="1160" rx="14" class="region"/>
+  <text x="840" y="137" class="lane-title">3 · ESTADO Y ARCHIVOS</text>
+  <rect x="1170" y="110" width="350" height="1160" rx="14" class="region"/>
+  <text x="1190" y="137" class="lane-title">4 · ADAPTADORES / SISTEMAS DESTINO</text>
+
+  <!-- connectors, behind nodes -->
+  <path d="M200 225V275" class="line-cyan"/>
+  <path d="M340 315H420" class="line-cyan"/>
+  <path d="M590 355V415" class="line"/>
+  <path d="M420 455H340" class="line-cyan"/>
+  <path d="M200 495V550" class="line-cyan"/>
+  <path d="M340 590H420" class="line-cyan"/>
+  <path d="M590 630V690" class="line"/>
+  <path d="M760 730H865" class="line-green"/>
+  <path d="M980 770V825" class="line"/>
+  <path d="M865 865H760" class="line-green"/>
+  <path d="M590 905V965" class="line"/>
+  <path d="M985 905V945H780V1005H760" class="line-green"/>
+  <path d="M760 1005H800V1060H1020V1080" class="line-amber"/>
+  <path d="M1130 1140H1165V845H1200" class="line-green"/>
+  <path d="M1165 1140H1185V1090H1200" class="line-amber"/>
+  <path d="M1335 1180V1220" class="line-green"/>
+  <path d="M910 1140H800V1095H760" class="line-rose"/>
+  <path d="M1480 965H1500V1265H780V1190H760" class="line-green"/>
+  <path d="M1340 1250V1265" class="line-green"/>
+  <path d="M360 455H385V1240H590V1190" class="line-cyan"/>
+  <path d="M760 455H820V360H865" class="line"/>
+
+  <!-- caller lane -->
+  <rect x="75" y="165" width="250" height="60" rx="25" class="node cyan"/>
+  <text x="200" y="190" class="box-title">Sistema solicitante</text>
+  <text x="200" y="207" class="box-sub">web / app de negocio</text>
+
+  <rect x="60" y="275" width="280" height="80" rx="9" class="node cyan"/>
+  <text x="200" y="300" class="box-title">POST /api/v1/salas</text>
+  <text x="200" y="319" class="box-sub">X-API-Key + sistema, módulo,</text>
+  <text x="200" y="335" class="box-sub">recurso_id, operación</text>
+  <text x="346" y="306" class="edge-label">crear sala</text>
+
+  <rect x="60" y="415" width="280" height="80" rx="9" class="node cyan"/>
+  <text x="200" y="440" class="box-title">Recibe respuesta de sala</text>
+  <text x="200" y="459" class="box-sub">QR / código · sala_id · token observador</text>
+  <text x="200" y="475" class="box-sub">URL WebSocket</text>
+
+  <rect x="60" y="550" width="280" height="80" rx="9" class="node cyan"/>
+  <text x="200" y="575" class="box-title">El móvil escanea / se une</text>
+  <text x="200" y="594" class="box-sub">token de invitación o código</text>
+  <text x="200" y="610" class="box-sub">abre WebSocket y carga archivos</text>
+
+  <rect x="60" y="1210" width="280" height="48" rx="9" class="node neutral"/>
+  <text x="200" y="1230" class="box-title">UI observa progreso</text>
+  <text x="200" y="1246" class="box-sub">WebSocket: estado / resultado / error</text>
+
+  <!-- service lane -->
+  <rect x="420" y="275" width="340" height="80" rx="9" class="node green"/>
+  <text x="590" y="300" class="box-title">sala_controller · valida API key</text>
+  <text x="590" y="320" class="box-sub">Construye ContextoDestino y llama</text>
+  <text x="590" y="336" class="box-sub">GestionSalas.crear_sala()</text>
+
+  <rect x="420" y="415" width="340" height="80" rx="9" class="node green"/>
+  <text x="590" y="440" class="box-title">Crea Sala + credenciales</text>
+  <text x="590" y="460" class="box-sub">código, expiración, hashes de tokens</text>
+  <text x="590" y="476" class="box-sub">arma payload QR + URL WebSocket</text>
+
+  <rect x="420" y="550" width="340" height="80" rx="9" class="node green"/>
+  <text x="590" y="575" class="box-title">Autoriza unión y uploads</text>
+  <text x="590" y="595" class="box-sub">X-Session-Token → rol móvil/observador</text>
+  <text x="590" y="611" class="box-sub">valida sala activa, límite y metadatos</text>
+
+  <rect x="420" y="690" width="340" height="80" rx="9" class="node green"/>
+  <text x="590" y="715" class="box-title">GestionSalas.registrar_documento()</text>
+  <text x="590" y="735" class="box-sub">verifica tipo, tamaño, recorte PDF</text>
+  <text x="590" y="751" class="box-sub">guarda DocumentoRecibido en la sala</text>
+
+  <rect x="420" y="825" width="340" height="80" rx="9" class="node green"/>
+  <text x="590" y="850" class="box-title">Finalizar sala</text>
+  <text x="590" y="870" class="box-sub">cambia estado → finalizando</text>
+  <text x="590" y="886" class="box-sub">agrupa páginas PDF y prepara archivos</text>
+
+  <rect x="420" y="965" width="340" height="80" rx="9" class="node amber"/>
+  <text x="590" y="990" class="box-title">destination_adapter.entregar()</text>
+  <text x="590" y="1010" class="box-sub">GestionSalas delega el envío al destino</text>
+  <text x="590" y="1026" class="box-sub">contrato común: sala + archivos → resultado</text>
+
+  <rect x="420" y="1065" width="340" height="60" rx="9" class="node rose"/>
+  <text x="590" y="1090" class="box-title">Error de entrega / destino no soportado</text>
+  <text x="590" y="1108" class="box-sub">marca sala en error · notifica por WebSocket · responde 502</text>
+
+  <rect x="420" y="1150" width="340" height="80" rx="9" class="node green"/>
+  <text x="590" y="1175" class="box-title">Éxito: completa y limpia</text>
+  <text x="590" y="1195" class="box-sub">estado completada + notifica por WS</text>
+  <text x="590" y="1211" class="box-sub">elimina archivos temporales de la sala</text>
+
+  <!-- storage lane -->
+  <rect x="865" y="315" width="240" height="90" rx="9" class="node violet"/>
+  <text x="985" y="343" class="box-title">MemorySalaRepository</text>
+  <text x="985" y="363" class="box-sub">salas en memoria</text>
+  <text x="985" y="380" class="box-sub">NO es persistencia durable</text>
+
+  <rect x="865" y="690" width="240" height="80" rx="9" class="node violet"/>
+  <text x="985" y="715" class="box-title">TemporaryFileStorage</text>
+  <text x="985" y="735" class="box-sub">storage/temp · archivos cargados</text>
+  <text x="985" y="751" class="box-sub">metadatos enlazados a la sala</text>
+
+  <rect x="865" y="825" width="240" height="80" rx="9" class="node violet"/>
+  <text x="985" y="850" class="box-title">Preparación</text>
+  <text x="985" y="870" class="box-sub">imágenes se conservan</text>
+  <text x="985" y="886" class="box-sub">páginas PDF → PDF por lote</text>
+
+  <polygon points="1020,1080 1130,1140 1020,1200 910,1140" class="node amber"/>
+  <text x="1020" y="1135" class="box-title">¿Destino</text>
+  <text x="1020" y="1152" class="box-title">soportado?</text>
+  <text x="1175" y="832" class="edge-label" fill="#34d399">kaisvm</text>
+  <text x="835" y="1128" class="edge-label" fill="#fb7185">no</text>
+
+  <!-- adapters lane -->
+  <rect x="1200" y="800" width="280" height="90" rx="9" class="node amber"/>
+  <text x="1340" y="827" class="box-title">KaisvmAdapter · vigente</text>
+  <text x="1340" y="847" class="box-sub">acepta kaisvm / grupos|gastos</text>
+  <text x="1340" y="864" class="box-sub">si está habilitado: HTTP multipart</text>
+  <path d="M1335 890V925" class="line-amber"/>
+  <rect x="1200" y="925" width="280" height="80" rx="9" class="node neutral"/>
+  <text x="1340" y="950" class="box-title">API KaisVM</text>
+  <text x="1340" y="970" class="box-sub">{base}/{módulo}/{recurso_id}/archivos</text>
+  <text x="1340" y="986" class="box-sub">Bearer opcional · reintentos de red</text>
+
+  <rect x="1200" y="1030" width="280" height="125" rx="9" class="future" stroke-width="1.8"/>
+  <text x="1340" y="1055" class="note-title" fill="#fbbf24" text-anchor="middle">EXTENSIÓN PENDIENTE · TRANSPORTE</text>
+  <text x="1220" y="1078" class="note">① TransporteAdapter.entregar()</text>
+  <text x="1220" y="1097" class="note">② aceptar sistema/módulo acordados</text>
+  <text x="1220" y="1116" class="note">③ URL, auth y multipart según su API</text>
+  <text x="1220" y="1135" class="note">④ registrarlo en el selector/fábrica</text>
+
+  <rect x="1200" y="1185" width="280" height="65" rx="9" class="node neutral"/>
+  <text x="1340" y="1210" class="box-title">Backend de Transporte</text>
+  <text x="1340" y="1230" class="box-sub">endpoint y contrato por confirmar</text>
+
+  <!-- notes / legend -->
+  <rect x="40" y="1300" width="1480" height="112" rx="12" fill="rgba(15,23,42,.9)" stroke="#334155"/>
+  <text x="62" y="1327" class="note-title" fill="#fbbf24">CLAVES PARA IMPLEMENTAR TRANSPORTE</text>
+  <text x="62" y="1351" class="note">• El contexto de destino ya viaja en la sala: sistema + módulo + recurso_id + operación.</text>
+  <text x="62" y="1371" class="note">• Configurar variables de entorno no basta: hoy TRANSPORTE_* no está en Settings ni se consume en Python.</text>
+  <text x="62" y="1391" class="note">• main.py hoy inyecta KaisvmAdapter directamente: separar TransporteAdapter y seleccionar el adaptador según ContextoDestino.</text>
+  <line x1="980" y1="1330" x2="1020" y2="1330" stroke="#34d399" stroke-width="2" marker-end="url(#arrow-green)"/>
+  <text x="1030" y="1334" class="tiny">flujo actual / éxito</text>
+  <line x1="1170" y1="1330" x2="1210" y2="1330" stroke="#fb7185" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrow-rose)"/>
+  <text x="1220" y="1334" class="tiny">error / destino no soportado</text>
+  <rect x="980" y="1350" width="24" height="14" rx="3" class="future"/>
+  <text x="1012" y="1362" class="tiny">implementación futura</text>
+  <text x="980" y="1392" class="tiny">Fuentes principales: main.py · gestion_salas.py · sala_controller.py · kaisvm_adapter.py · config.py</text>
+</svg>
