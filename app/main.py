@@ -69,3 +69,9 @@ logger.info(
 @app.get("/health")
 def health_check() -> dict[str, str]:
     return {"status": "ok", "service": settings.app_name}
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host=settings.host, port=settings.port)
