@@ -16,7 +16,6 @@ from app.domain.exceptions import DestinoNoConfiguradoError, EntregaDestinoError
 from app.infrastructure.destinations.destination_result import EntregaResultado
 from app.infrastructure.storage.temporary_file_storage import ArchivoTemporal
 
-
 logger = logging.getLogger(__name__)
 
 _SUPPORTED_UPLOAD_MIME_TYPES = {

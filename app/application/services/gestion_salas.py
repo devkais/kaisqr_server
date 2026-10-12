@@ -13,7 +13,12 @@ from typing import Any
 from fastapi import UploadFile
 
 from app.core.config import Settings
-from app.domain.entities.sala import ContextoDestino, DocumentoRecibido, EstadoSala, Sala
+from app.domain.entities.sala import (
+    ContextoDestino,
+    DocumentoRecibido,
+    EstadoSala,
+    Sala,
+)
 from app.domain.exceptions import (
     AccesoSalaInvalidoError,
     DocumentoInvalidoError,
@@ -24,7 +29,10 @@ from app.infrastructure.destinations.destination_dispatcher import DestinationDi
 from app.infrastructure.documents.pdf_creator import PdfCreator
 from app.infrastructure.qr.qr_code_generator import QrCodeGenerator
 from app.infrastructure.repositories.memory_sala_repository import MemorySalaRepository
-from app.infrastructure.storage.temporary_file_storage import ArchivoTemporal, TemporaryFileStorage
+from app.infrastructure.storage.temporary_file_storage import (
+    ArchivoTemporal,
+    TemporaryFileStorage,
+)
 from app.infrastructure.websocket.connection_manager import ConnectionManager
 
 
@@ -104,7 +112,9 @@ class GestionSalas:
         sala = self.obtener_sala(sala_id)
         rol = sala.validar_token(token)
         if rol != "movil":
-            raise AccesoSalaInvalidoError("El token no permite conectar la aplicación móvil")
+            raise AccesoSalaInvalidoError(
+                "El token no permite conectar la aplicación móvil"
+            )
         sala.conectar_movil()
         self.repository.guardar(sala)
         return sala
@@ -140,7 +150,9 @@ class GestionSalas:
         sala = self.obtener_sala(sala_id)
         rol = sala.validar_token(token)
         if rol != "movil":
-            raise AccesoSalaInvalidoError("Solo la aplicación móvil puede enviar documentos")
+            raise AccesoSalaInvalidoError(
+                "Solo la aplicación móvil puede enviar documentos"
+            )
         if not archivo.filename:
             raise DocumentoInvalidoError("El archivo debe tener un nombre")
 
@@ -148,7 +160,9 @@ class GestionSalas:
         if tipo_archivo_normalizado not in {"imagen", "pdf"}:
             raise DocumentoInvalidoError("El tipo de archivo no es válido")
         poligono_normalizado = (
-            self._parsear_poligono(poligono) if tipo_archivo_normalizado == "pdf" else []
+            self._parsear_poligono(poligono)
+            if tipo_archivo_normalizado == "pdf"
+            else []
         )
         lote_pdf_id_normalizado = (
             self._normalizar_lote_pdf_id(lote_pdf_id)
@@ -228,9 +242,14 @@ class GestionSalas:
         )
         sala.iniciar_finalizacion()
         self.repository.guardar(sala)
-        await self.connection_manager.broadcast(sala_id, self._estado_evento(sala, "Procesando documentos"))
+        await self.connection_manager.broadcast(
+            sala_id, self._estado_evento(sala, "Procesando documentos")
+        )
 
-        archivos = [self.temporary_storage.desde_documento(documento) for documento in sala.documentos]
+        archivos = [
+            self.temporary_storage.desde_documento(documento)
+            for documento in sala.documentos
+        ]
         try:
             archivos_para_entrega: list[ArchivoTemporal] = []
             lotes_pdf: dict[str, list[ArchivoTemporal]] = {}
@@ -316,7 +335,9 @@ class GestionSalas:
                 ",".join(archivo.nombre_original for archivo in archivos_para_entrega),
             )
 
-            resultado = await self.destination_adapter.entregar(sala, archivos_para_entrega)
+            resultado = await self.destination_adapter.entregar(
+                sala, archivos_para_entrega
+            )
             sala.completar()
             self.repository.guardar(sala)
             logger.info(
@@ -324,7 +345,9 @@ class GestionSalas:
                 sala_id,
                 resultado.mensaje,
             )
-            await self.connection_manager.broadcast(sala_id, self._estado_evento(sala, resultado.mensaje))
+            await self.connection_manager.broadcast(
+                sala_id, self._estado_evento(sala, resultado.mensaje)
+            )
             self.temporary_storage.eliminar_sala(sala_id)
             return {
                 "sala_id": sala.sala_id,
@@ -332,7 +355,9 @@ class GestionSalas:
                 "mensaje": resultado.mensaje,
                 "cantidad_documentos": len(sala.documentos),
                 "cantidad_imagenes": sum(
-                    1 for documento in sala.documentos if documento.tipo_archivo == "imagen"
+                    1
+                    for documento in sala.documentos
+                    if documento.tipo_archivo == "imagen"
                 ),
                 "cantidad_pdf": len(lotes_pdf),
                 "resultado_destino": resultado.datos,
@@ -348,7 +373,9 @@ class GestionSalas:
                 type(error).__name__,
                 error,
             )
-            await self.connection_manager.broadcast(sala_id, self._estado_evento(sala, str(error)))
+            await self.connection_manager.broadcast(
+                sala_id, self._estado_evento(sala, str(error))
+            )
             raise
 
     async def cerrar_sala(self, sala_id: str, token: str) -> dict[str, Any]:
@@ -458,7 +485,9 @@ class GestionSalas:
         return candidato
 
     @staticmethod
-    def _documento_respuesta(documento: DocumentoRecibido, sala: Sala) -> dict[str, Any]:
+    def _documento_respuesta(
+        documento: DocumentoRecibido, sala: Sala
+    ) -> dict[str, Any]:
         return {
             "documento_id": documento.documento_id,
             "nombre": documento.nombre_personalizado or documento.nombre_original,
@@ -479,7 +508,9 @@ class GestionSalas:
         try:
             puntos = json.loads(valor)
         except json.JSONDecodeError as error:
-            raise DocumentoInvalidoError("El recorte de la página no es válido") from error
+            raise DocumentoInvalidoError(
+                "El recorte de la página no es válido"
+            ) from error
 
         if not isinstance(puntos, list) or len(puntos) != 4:
             raise DocumentoInvalidoError("El recorte debe contener cuatro puntos")
@@ -492,9 +523,18 @@ class GestionSalas:
                 x = float(punto["x"])
                 y = float(punto["y"])
             except (TypeError, ValueError) as error:
-                raise DocumentoInvalidoError("Las coordenadas del recorte no son válidas") from error
-            if not math.isfinite(x) or not math.isfinite(y) or not (0 <= x <= 1) or not (0 <= y <= 1):
-                raise DocumentoInvalidoError("Las coordenadas del recorte deben estar entre 0 y 1")
+                raise DocumentoInvalidoError(
+                    "Las coordenadas del recorte no son válidas"
+                ) from error
+            if (
+                not math.isfinite(x)
+                or not math.isfinite(y)
+                or not (0 <= x <= 1)
+                or not (0 <= y <= 1)
+            ):
+                raise DocumentoInvalidoError(
+                    "Las coordenadas del recorte deben estar entre 0 y 1"
+                )
             poligono.append({"x": x, "y": y})
 
         return poligono

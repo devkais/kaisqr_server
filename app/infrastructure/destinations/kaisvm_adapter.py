@@ -24,7 +24,9 @@ class KaisvmAdapter:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
 
-    async def entregar(self, sala: Sala, archivos: list[ArchivoTemporal]) -> EntregaResultado:
+    async def entregar(
+        self, sala: Sala, archivos: list[ArchivoTemporal]
+    ) -> EntregaResultado:
         contexto = sala.contexto_destino
         if (
             contexto.sistema != "kaisvm"
@@ -92,8 +94,7 @@ class KaisvmAdapter:
                 for intento in range(3):
                     inicio_intento = time.perf_counter()
                     logger.info(
-                        "[KAISVM] POST iniciado | sala=%s | archivo=%s | "
-                        "intento=%d/3",
+                        "[KAISVM] POST iniciado | sala=%s | archivo=%s | intento=%d/3",
                         sala.sala_id,
                         archivo.nombre_original,
                         intento + 1,

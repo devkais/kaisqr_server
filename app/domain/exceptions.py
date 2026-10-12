@@ -24,4 +24,3 @@ class DestinoNoConfiguradoError(Exception):
 
 class EntregaDestinoError(Exception):
     """El backend propietario rechazó la entrega."""
-

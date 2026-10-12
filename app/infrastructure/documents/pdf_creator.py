@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import math
 import re
+from collections.abc import Sequence
 from io import BytesIO
 from pathlib import Path
-from typing import Sequence
 
 from PIL import Image, ImageOps
 from reportlab.lib.pagesizes import A4, landscape, portrait
@@ -101,9 +101,7 @@ class PdfCreator:
             for punto in poligono
         )
         if any(
-            not math.isfinite(coordenada)
-            for punto in puntos
-            for coordenada in punto
+            not math.isfinite(coordenada) for punto in puntos for coordenada in punto
         ):
             raise ValueError("El polígono contiene coordenadas no válidas")
 
@@ -158,7 +156,9 @@ class PdfCreator:
             )
             buffer.seek(0)
 
-            pagina = landscape(A4) if imagen_pdf.width > imagen_pdf.height else portrait(A4)
+            pagina = (
+                landscape(A4) if imagen_pdf.width > imagen_pdf.height else portrait(A4)
+            )
             pdf.setPageSize(pagina)
             ancho_pagina, alto_pagina = pagina
             margen = 18

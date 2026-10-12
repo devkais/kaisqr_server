@@ -55,7 +55,9 @@ class JoinSessionRequest(BaseModel):
 def build_router(service: GestionSalas, api_key: str) -> APIRouter:
     router = APIRouter()
 
-    def require_api_key(x_api_key: str | None = Header(default=None, alias="X-API-Key")) -> None:
+    def require_api_key(
+        x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+    ) -> None:
         if api_key and x_api_key != api_key:
             raise HTTPException(status_code=401, detail="API key inválida")
 
@@ -88,8 +90,7 @@ def build_router(service: GestionSalas, api_key: str) -> APIRouter:
         except Exception as error:
             http_error = _to_http_exception(error)
             logger.warning(
-                "[HTTP] Unión rechazada | codigo=%s | status=%d | "
-                "tipo=%s | detalle=%s",
+                "[HTTP] Unión rechazada | codigo=%s | status=%d | tipo=%s | detalle=%s",
                 request.codigo,
                 http_error.status_code,
                 type(error).__name__,
@@ -188,7 +189,9 @@ def build_router(service: GestionSalas, api_key: str) -> APIRouter:
             raise http_error from error
 
     @router.websocket("/ws/v1/salas/{sala_id}")
-    async def session_websocket(websocket: WebSocket, sala_id: str, token: str = "") -> None:
+    async def session_websocket(
+        websocket: WebSocket, sala_id: str, token: str = ""
+    ) -> None:
         try:
             rol = service.validar_acceso(sala_id, token)
             if rol == "movil":
@@ -198,7 +201,9 @@ def build_router(service: GestionSalas, api_key: str) -> APIRouter:
             return
 
         await service.connection_manager.connect(sala_id, websocket)
-        await websocket.send_json({"tipo": "sala_conectada", "sala_id": sala_id, "rol": rol})
+        await websocket.send_json(
+            {"tipo": "sala_conectada", "sala_id": sala_id, "rol": rol}
+        )
         try:
             while True:
                 mensaje = await websocket.receive_text()

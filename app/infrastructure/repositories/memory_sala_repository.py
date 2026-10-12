@@ -23,5 +23,6 @@ class MemorySalaRepository:
 
     def buscar_por_codigo(self, codigo: str) -> Sala | None:
         with self._lock:
-            return next((sala for sala in self._salas.values() if sala.codigo == codigo), None)
-
+            return next(
+                (sala for sala in self._salas.values() if sala.codigo == codigo), None
+            )

@@ -29,7 +29,9 @@ class TemporaryFileStorage:
         self.root_path = root_path
         self.root_path.mkdir(parents=True, exist_ok=True)
 
-    async def guardar(self, sala_id: str, archivo: UploadFile, max_size_bytes: int) -> ArchivoTemporal:
+    async def guardar(
+        self, sala_id: str, archivo: UploadFile, max_size_bytes: int
+    ) -> ArchivoTemporal:
         documento_id = str(uuid.uuid4())
         nombre_original = Path(archivo.filename or "documento").name
         carpeta_sala = self.root_path / sala_id

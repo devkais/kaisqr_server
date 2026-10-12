@@ -15,12 +15,12 @@ from app.infrastructure.storage.temporary_file_storage import TemporaryFileStora
 from app.infrastructure.websocket.connection_manager import ConnectionManager
 from app.presentation.controllers.sala_controller import build_router
 
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
 )
 logger = logging.getLogger(__name__)
+
 
 settings = get_settings()
 repository = MemorySalaRepository()
@@ -48,7 +48,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.include_router(build_router(session_service, settings.api_key), prefix=settings.api_prefix)
+app.include_router(
+    build_router(session_service, settings.api_key), prefix=settings.api_prefix
+)
 
 logger.info(
     "[INICIO] KaisQr_server | entorno=%s | api=%s | reenvio_kaisvm=%s | "

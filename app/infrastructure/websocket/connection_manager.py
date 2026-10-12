@@ -29,4 +29,3 @@ class ConnectionManager:
                 await websocket.send_json(evento)
             except Exception:
                 self.disconnect(sala_id, websocket)
-

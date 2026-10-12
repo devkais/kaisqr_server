@@ -87,7 +87,10 @@ class Sala:
             raise AccesoSalaInvalidoError("El token de la sala es obligatorio")
 
         token_hash = self.generar_hash_token(token)
-        if any(hmac.compare_digest(token_hash, token_hash_guardado) for token_hash_guardado in self.tokens_invitacion_hash):
+        if any(
+            hmac.compare_digest(token_hash, token_hash_guardado)
+            for token_hash_guardado in self.tokens_invitacion_hash
+        ):
             return "movil"
         if hmac.compare_digest(token_hash, self.token_observador_hash):
             return "observador"
